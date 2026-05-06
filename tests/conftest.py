@@ -24,9 +24,9 @@ def db_session():
         poolclass=StaticPool,
         future=True,
     )
-    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, future=True)
+    testing_session_local = sessionmaker(autocommit=False, autoflush=False, bind=engine, future=True)
     Base.metadata.create_all(bind=engine)
-    session = TestingSessionLocal()
+    session = testing_session_local()
 
     customer = Account(
         account_id=1,
@@ -48,15 +48,15 @@ def db_session():
     session.flush()
 
     customer_profile = CustomerProfile(
-        customer_id=1,
+        customer_id=101,
         account_id=customer.account_id,
-        customer_name="고객",
+        customer_name="Test Customer",
         customer_phone="010-0000-0000",
     )
     owner_profile = OwnerProfile(
         owner_id=1,
         account_id=owner.account_id,
-        owner_name="점주",
+        owner_name="Test Owner",
         owner_phone="010-9999-9999",
     )
     session.add_all([customer_profile, owner_profile])
@@ -65,9 +65,9 @@ def db_session():
     farm = Farm(
         farm_id=1,
         owner_id=owner_profile.owner_id,
-        farm_name="테스트 농장",
-        farm_region="경북",
-        farm_address="테스트 주소",
+        farm_name="Test Farm",
+        farm_region="Seoul",
+        farm_address="Test Address",
     )
     session.add(farm)
     session.flush()
@@ -75,7 +75,7 @@ def db_session():
     product = Product(
         product_id=1,
         farm_id=farm.farm_id,
-        product_name="테스트 사과",
+        product_name="Test Apple Box",
         fruit_type="APPLE",
         variety="Fuji",
         package_unit_kg=5.0,
@@ -96,7 +96,7 @@ def db_session():
         reserved_kg=10.0,
         sold_kg=5.0,
         confirmed_price=39000,
-        customer_notice="테스트 고지",
+        customer_notice="Test notice",
         slot_status="OPEN",
         owner_confirmed_at=datetime.utcnow(),
         opened_at=datetime.utcnow(),

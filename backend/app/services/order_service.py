@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from backend.app.core.status import OrderItemStatus, OrderStatus, ReservationStatus
 from backend.app.core.transaction import transaction_scope
 from backend.app.models.order import Order, OrderItem
-from backend.app.models.reservation import Reservation, ReservationItem
+from backend.app.models.reservation import Reservation
 from backend.app.repositories.order_repo import OrderRepository
 from backend.app.repositories.reservation_repo import ReservationRepository
 
@@ -47,21 +47,17 @@ class OrderService:
 
     def create_from_reservation(self, customer_id: int, payload: dict) -> dict:
         with transaction_scope(self.session):
-            # 주문 생성:
-            # 1. reservations 행 잠금
-            reservation = self.reservation_repo.lock_reservation(payload["reservation_id"])
+            reservation = self.reservation_repo.lock_reservation_for_customer(
+                reservation_id=payload["reservation_id"],
+                customer_id=customer_id,
+            )
             if not reservation:
                 raise HTTPException(status_code=404, detail="reservation not found")
-            if reservation.customer_id != customer_id:
-                raise HTTPException(status_code=403, detail="reservation access denied")
-            # 2. reservation_status = RESERVED 검증
             if reservation.reservation_status != ReservationStatus.RESERVED:
-                raise HTTPException(status_code=400, detail="reservation is not in RESERVED state")
-            # 3. reserved_until > now 검증
+                raise HTTPException(status_code=400, detail="invalid reservation status")
             if reservation.reserved_until <= datetime.utcnow():
                 raise HTTPException(status_code=400, detail="reservation expired")
 
-            # 4. orders 생성
             order = Order(
                 reservation_id=reservation.reservation_id,
                 order_no=f"ORD-{int(datetime.utcnow().timestamp())}",
@@ -76,26 +72,23 @@ class OrderService:
             self.session.add(order)
             self.session.flush()
 
-            # 5. order_items 생성
             for item in reservation.reservation_items:
-                order_item = OrderItem(
-                    order_id=order.order_id,
-                    reservation_item_id=item.reservation_item_id,
-                    package_count=item.package_count,
-                    ordered_kg=item.reserved_kg,
-                    unit_price=item.unit_price_snapshot,
-                    subtotal_amount=item.subtotal_amount,
-                    order_item_status=OrderItemStatus.ORDERED,
+                self.session.add(
+                    OrderItem(
+                        order_id=order.order_id,
+                        reservation_item_id=item.reservation_item_id,
+                        package_count=item.package_count,
+                        ordered_kg=item.reserved_kg,
+                        unit_price=item.unit_price_snapshot,
+                        subtotal_amount=item.subtotal_amount,
+                        order_item_status=OrderItemStatus.ORDERED,
+                    )
                 )
-                self.session.add(order_item)
 
-            # 6. reservations.status = ORDERED
             reservation.reservation_status = ReservationStatus.ORDERED
-            # 7. commit
             self.session.flush()
             self.session.refresh(order)
-        self.session.refresh(order)
-        return serialize_order(order)
+            return serialize_order(order)
 
     def list_my_orders(self, customer_id: int) -> list[dict]:
         rows = (

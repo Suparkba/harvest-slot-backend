@@ -116,3 +116,59 @@ def test_openapi_oauth2_password_flow_points_to_login(client):
     security_scheme = response.json()["components"]["securitySchemes"]["OAuth2PasswordBearer"]
     assert security_scheme["type"] == "oauth2"
     assert security_scheme["flows"]["password"]["tokenUrl"] == "/api/v1/auth/token"
+
+
+def test_customer_reservation_to_order_flow_persists_in_db(client):
+    login_response = client.post(
+        "/api/v1/auth/token",
+        data={"username": "customer@test.com", "password": "demo1234!"},
+    )
+    token = login_response.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    create_response = client.post(
+        "/api/v1/reservations",
+        json={"items": [{"slot_id": 1, "package_count": 1}]},
+        headers=headers,
+    )
+    assert create_response.status_code == 200
+    create_body = create_response.json()
+    reservation_id = create_body["data"]["reservation_id"]
+    assert reservation_id >= 1
+    assert create_body["data"]["reservation_status"] == "RESERVED"
+
+    list_response = client.get("/api/v1/me/reservations", headers=headers)
+    assert list_response.status_code == 200
+    list_body = list_response.json()
+    reservation_ids = [row["reservation_id"] for row in list_body["data"]]
+    assert reservation_id in reservation_ids
+
+    created_reservation = next(row for row in list_body["data"] if row["reservation_id"] == reservation_id)
+    assert created_reservation["items"][0]["slot_id"] == 1
+    assert created_reservation["items"][0]["reserved_kg"] == 5.0
+
+    slots_response = client.get("/api/v1/products/1/slots")
+    assert slots_response.status_code == 200
+    assert slots_response.json()["data"][0]["available_kg"] == 80.0
+
+    order_response = client.post(
+        "/api/v1/orders/from-reservation",
+        json={
+            "reservation_id": reservation_id,
+            "receiver_name": "Test Customer",
+            "receiver_phone": "010-1111-2222",
+            "shipping_address": "Seoul Test Address",
+            "delivery_memo": "Call first",
+        },
+        headers=headers,
+    )
+    assert order_response.status_code == 200
+    order_body = order_response.json()
+    assert order_body["data"]["reservation_id"] == reservation_id
+    assert order_body["data"]["order_status"] == "PAYMENT_PENDING"
+
+    refreshed_list_response = client.get("/api/v1/me/reservations", headers=headers)
+    refreshed_reservation = next(
+        row for row in refreshed_list_response.json()["data"] if row["reservation_id"] == reservation_id
+    )
+    assert refreshed_reservation["reservation_status"] == "ORDERED"

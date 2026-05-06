@@ -1,7 +1,11 @@
 import pytest
 from fastapi import HTTPException
+from sqlalchemy import select
+from sqlalchemy.orm import sessionmaker
 
 from backend.app.models.harvest_slot import HarvestSlot
+from backend.app.models.reservation import Reservation
+from backend.app.services.reservation_service import ReservationService
 from backend.app.services.reservation_service import (
     calculate_available_kg,
     calculate_reserved_kg,
@@ -31,3 +35,27 @@ def test_package_count_times_package_unit_kg():
 def test_exceeds_available_kg_raises():
     with pytest.raises(HTTPException):
         ensure_quantity_available(15.0, 10.0)
+
+
+def test_create_reservation_commits_even_after_auth_lookup(db_session):
+    db_session.execute(select(Reservation).where(Reservation.customer_id == 101))
+
+    created = ReservationService(db_session).create_reservation(
+        customer_id=101,
+        items=[{"slot_id": 1, "package_count": 1}],
+    )
+    reservation_id = created["reservation_id"]
+
+    verification_session = sessionmaker(
+        autocommit=False,
+        autoflush=False,
+        bind=db_session.get_bind(),
+        future=True,
+    )()
+    try:
+        saved = verification_session.get(Reservation, reservation_id)
+        assert saved is not None
+        assert saved.customer_id == 101
+        assert saved.reservation_status == "RESERVED"
+    finally:
+        verification_session.close()
