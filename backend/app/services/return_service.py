@@ -1,9 +1,10 @@
 from datetime import datetime
 
 from fastapi import HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from backend.app.core.status import OrderStatus, PaymentStatus, RefundStatus, ReturnStatus
+from backend.app.core.status import OrderItemStatus, OrderStatus, PaymentStatus, RefundStatus, ReturnStatus
 from backend.app.core.transaction import transaction_scope
 from backend.app.models.return_refund import Refund, ReturnRequest
 from backend.app.repositories.order_repo import OrderRepository
@@ -73,47 +74,87 @@ class ReturnService:
         filtered = [row for row in rows if row.order.procurement and row.order.procurement.owner_id == owner_id]
         return [serialize_return_request(row) for row in filtered]
 
+    @staticmethod
+    def _validate_decision(decision: str) -> None:
+        if decision not in {ReturnStatus.APPROVED, ReturnStatus.REJECTED}:
+            raise HTTPException(status_code=400, detail="invalid return decision")
+
+    @staticmethod
+    def _ensure_return_not_decided(return_request: ReturnRequest) -> None:
+        if return_request.return_status in {ReturnStatus.APPROVED, ReturnStatus.REJECTED, ReturnStatus.REFUNDED}:
+            raise HTTPException(status_code=400, detail="return request already decided")
+
+    @staticmethod
+    def _resolve_approved_payment(return_request: ReturnRequest):
+        approved_payment = next(
+            (payment for payment in return_request.order.payments if payment.payment_status == PaymentStatus.APPROVED),
+            None,
+        )
+        if not approved_payment:
+            raise HTTPException(status_code=400, detail="approved payment not found")
+        return approved_payment
+
+    @staticmethod
+    def _validate_approved_amount(return_request: ReturnRequest, approved_payment, approved_amount: int) -> None:
+        if approved_amount < 0:
+            raise HTTPException(status_code=400, detail="approved amount must be zero or greater")
+        if approved_amount > return_request.requested_amount:
+            raise HTTPException(status_code=400, detail="approved amount exceeds requested amount")
+        if approved_amount > approved_payment.approved_amount:
+            raise HTTPException(status_code=400, detail="approved amount exceeds payment amount")
+
     def decide_return(self, owner_id: int, return_request_id: int, payload: dict) -> dict:
-        with transaction_scope(self.session):
-            # 반품 승인 및 환불:
-            # 1. return_requests 행 잠금
-            return_request = self.return_repo.lock_return_request(return_request_id)
-            if not return_request or not return_request.order.procurement or return_request.order.procurement.owner_id != owner_id:
-                raise HTTPException(status_code=404, detail="return request not found")
+        try:
+            with transaction_scope(self.session):
+                return_request = self.return_repo.lock_return_request(return_request_id)
+                if (
+                    not return_request
+                    or not return_request.order.procurement
+                    or return_request.order.procurement.owner_id != owner_id
+                ):
+                    raise HTTPException(status_code=404, detail="return request not found")
 
-            decision = payload["decision"]
-            return_request.decision_reason = payload.get("decision_reason")
-            return_request.approved_amount = payload["approved_amount"]
-            return_request.decided_at = datetime.utcnow()
+                decision = payload["decision"]
+                approved_amount = payload["approved_amount"]
+                self._validate_decision(decision)
+                self._ensure_return_not_decided(return_request)
 
-            if decision == ReturnStatus.APPROVED:
-                approved_payment = next((payment for payment in return_request.order.payments if payment.payment_status == PaymentStatus.APPROVED), None)
-                if not approved_payment:
-                    raise HTTPException(status_code=400, detail="approved payment not found")
-                # 2. return_requests 상태 갱신
-                return_request.return_status = ReturnStatus.REFUNDED
-                refund = Refund(
-                    return_request_id=return_request.return_request_id,
-                    payment_id=approved_payment.payment_id,
-                    refund_status=RefundStatus.COMPLETED,
-                    requested_amount=return_request.requested_amount,
-                    refunded_amount=payload["approved_amount"],
-                    requested_at=datetime.utcnow(),
-                    completed_at=datetime.utcnow(),
-                )
-                # 3. refunds 생성
-                self.session.add(refund)
-                # 4. payments 상태 REFUNDED
-                approved_payment.payment_status = PaymentStatus.REFUNDED
-                # 5. orders 상태 REFUNDED
-                return_request.order.order_status = OrderStatus.REFUNDED
-            else:
-                # 2. return_requests 상태 갱신
-                return_request.return_status = ReturnStatus.REJECTED
+                if return_request.refund:
+                    raise HTTPException(status_code=400, detail="refund already exists")
 
-            # 6. commit
-            self.session.flush()
-            self.session.refresh(return_request)
+                return_request.decision_reason = payload.get("decision_reason")
+                return_request.decided_at = datetime.utcnow()
+
+                if decision == ReturnStatus.APPROVED:
+                    approved_payment = self._resolve_approved_payment(return_request)
+                    self._validate_approved_amount(return_request, approved_payment, approved_amount)
+
+                    return_request.return_status = ReturnStatus.REFUNDED
+                    return_request.approved_amount = approved_amount
+                    self.session.add(
+                        Refund(
+                            return_request_id=return_request.return_request_id,
+                            payment_id=approved_payment.payment_id,
+                            refund_status=RefundStatus.COMPLETED,
+                            requested_amount=return_request.requested_amount,
+                            refunded_amount=approved_amount,
+                            requested_at=datetime.utcnow(),
+                            completed_at=datetime.utcnow(),
+                        )
+                    )
+                    approved_payment.payment_status = PaymentStatus.REFUNDED
+                    return_request.order.order_status = OrderStatus.REFUNDED
+                    for order_item in return_request.order.order_items:
+                        order_item.order_item_status = OrderItemStatus.REFUNDED
+                else:
+                    return_request.return_status = ReturnStatus.REJECTED
+                    return_request.approved_amount = 0
+
+                self.session.flush()
+                self.session.refresh(return_request)
+        except IntegrityError as exc:
+            self.session.rollback()
+            raise HTTPException(status_code=400, detail="refund already exists") from exc
 
         return serialize_return_request(return_request)
 

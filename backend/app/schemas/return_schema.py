@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ReturnCreateRequest(BaseModel):
@@ -11,5 +11,5 @@ class ReturnCreateRequest(BaseModel):
 
 class ReturnDecisionRequest(BaseModel):
     decision: str
-    approved_amount: int
+    approved_amount: int = Field(ge=0)
     decision_reason: str | None = None

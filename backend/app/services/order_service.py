@@ -39,6 +39,20 @@ def serialize_order(order: Order) -> dict:
     }
 
 
+def serialize_refund(refund) -> dict | None:
+    if not refund:
+        return None
+    return {
+        "refund_id": refund.refund_id,
+        "refund_status": refund.refund_status,
+        "requested_amount": refund.requested_amount,
+        "refunded_amount": refund.refunded_amount,
+        "requested_at": refund.requested_at,
+        "completed_at": refund.completed_at,
+        "failure_reason": refund.failure_reason,
+    }
+
+
 class OrderService:
     def __init__(self, session: Session):
         self.session = session
@@ -136,10 +150,17 @@ class OrderService:
             {
                 "return_request_id": order.return_request.return_request_id,
                 "return_status": order.return_request.return_status,
+                "requested_amount": order.return_request.requested_amount,
+                "approved_amount": order.return_request.approved_amount,
+                "decision_reason": order.return_request.decision_reason,
+                "requested_at": order.return_request.requested_at,
+                "decided_at": order.return_request.decided_at,
+                "refund": serialize_refund(order.return_request.refund),
             }
             if order.return_request
             else None
         )
+        data["refund"] = serialize_refund(order.return_request.refund) if order.return_request else None
         return data
 
     def list_owner_orders(self, owner_id: int) -> list[dict]:
