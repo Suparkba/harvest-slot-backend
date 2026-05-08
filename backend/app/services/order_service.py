@@ -15,19 +15,45 @@ def serialize_order(order: Order) -> dict:
     return {
         "order_id": order.order_id,
         "reservation_id": order.reservation_id,
+        "reservation_no": order.reservation.reservation_no if order.reservation else None,
         "order_no": order.order_no,
         "order_status": order.order_status,
         "total_amount": order.total_amount,
+        "customer_id": order.reservation.customer_id if order.reservation else None,
+        "customer_name": order.reservation.customer.customer_name if order.reservation and order.reservation.customer else None,
         "receiver_name": order.receiver_name,
         "receiver_phone": order.receiver_phone,
         "shipping_address": order.shipping_address,
         "delivery_memo": order.delivery_memo,
         "ordered_at": order.ordered_at,
         "paid_at": order.paid_at,
+        "payment_status": order.payments[0].payment_status if order.payments else None,
+        "shipment_status": order.shipment.shipment_status if order.shipment else None,
+        "tracking_no": order.shipment.tracking_no if order.shipment else None,
+        "return_status": order.return_request.return_status if order.return_request else None,
+        "refund_status": order.return_request.refund.refund_status if order.return_request and order.return_request.refund else None,
         "order_items": [
             {
                 "order_item_id": item.order_item_id,
                 "reservation_item_id": item.reservation_item_id,
+                "slot_id": item.reservation_item.slot_id if item.reservation_item else None,
+                "product_id": item.reservation_item.slot.product_id if item.reservation_item and item.reservation_item.slot else None,
+                "product_name": (
+                    item.reservation_item.slot.product.product_name
+                    if item.reservation_item and item.reservation_item.slot and item.reservation_item.slot.product
+                    else None
+                ),
+                "farm_id": item.reservation_item.slot.farm_id if item.reservation_item and item.reservation_item.slot else None,
+                "farm_name": (
+                    item.reservation_item.slot.farm.farm_name
+                    if item.reservation_item and item.reservation_item.slot and item.reservation_item.slot.farm
+                    else None
+                ),
+                "image_url": (
+                    item.reservation_item.slot.product.image_url
+                    if item.reservation_item and item.reservation_item.slot and item.reservation_item.slot.product
+                    else None
+                ),
                 "package_count": item.package_count,
                 "ordered_kg": float(item.ordered_kg),
                 "unit_price": item.unit_price,

@@ -12,11 +12,20 @@ from backend.app.repositories.return_repo import ReturnRepository
 
 
 def serialize_return_request(return_request: ReturnRequest) -> dict:
+    order = return_request.order
     return {
         "return_request_id": return_request.return_request_id,
         "order_id": return_request.order_id,
+        "order_no": order.order_no if order else None,
+        "reservation_id": order.reservation_id if order else None,
+        "reservation_no": order.reservation.reservation_no if order and order.reservation else None,
+        "customer_id": order.reservation.customer_id if order and order.reservation else None,
+        "customer_name": order.reservation.customer.customer_name if order and order.reservation and order.reservation.customer else None,
         "return_no": return_request.return_no,
         "return_status": return_request.return_status,
+        "order_status": order.order_status if order else None,
+        "shipment_status": order.shipment.shipment_status if order and order.shipment else None,
+        "total_amount": order.total_amount if order else None,
         "reason_code": return_request.reason_code,
         "reason_detail": return_request.reason_detail,
         "evidence_image_url": return_request.evidence_image_url,
@@ -29,10 +38,35 @@ def serialize_return_request(return_request: ReturnRequest) -> dict:
             {
                 "refund_id": return_request.refund.refund_id,
                 "refund_status": return_request.refund.refund_status,
+                "requested_amount": return_request.refund.requested_amount,
                 "refunded_amount": return_request.refund.refunded_amount,
             }
             if return_request.refund
             else None
+        ),
+        "refund_status": return_request.refund.refund_status if return_request.refund else None,
+        "items": (
+            [
+                {
+                    "order_item_id": item.order_item_id,
+                    "product_id": item.reservation_item.slot.product_id if item.reservation_item and item.reservation_item.slot else None,
+                    "product_name": (
+                        item.reservation_item.slot.product.product_name
+                        if item.reservation_item and item.reservation_item.slot and item.reservation_item.slot.product
+                        else None
+                    ),
+                    "image_url": (
+                        item.reservation_item.slot.product.image_url
+                        if item.reservation_item and item.reservation_item.slot and item.reservation_item.slot.product
+                        else None
+                    ),
+                    "ordered_kg": float(item.ordered_kg),
+                    "package_count": item.package_count,
+                }
+                for item in order.order_items
+            ]
+            if order
+            else []
         ),
     }
 

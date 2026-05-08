@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, File, UploadFile
 from sqlalchemy.orm import Session
 
 from backend.app.core.database import get_db
@@ -69,6 +69,16 @@ def update_product(
     db: Session = Depends(get_db),
 ) -> dict:
     return success_response(ProductService(db).update_product(current_user.owner_id, product_id, payload.model_dump()))
+
+
+@router.post("/owner/products/{product_id}/image")
+def upload_product_image(
+    product_id: int,
+    file: UploadFile = File(..., description="상품 대표 이미지 파일"),
+    current_user: AuthenticatedUser = Depends(require_owner),
+    db: Session = Depends(get_db),
+) -> dict:
+    return success_response(ProductService(db).upload_product_image(current_user.owner_id, product_id, file))
 
 
 @router.patch("/owner/products/{product_id}/status")

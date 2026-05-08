@@ -16,6 +16,7 @@ class OwnerService:
         self.session = session
 
     def dashboard(self, owner_id: int) -> dict:
+        profile = self.session.get(OwnerProfile, owner_id)
         open_slots = self.session.scalar(
             select(func.count(HarvestSlot.slot_id)).where(
                 and_(HarvestSlot.slot_status == HarvestSlotStatus.OPEN, HarvestSlot.farm.has(owner_id=owner_id))
@@ -54,6 +55,8 @@ class OwnerService:
             ]
         )
         return {
+            "owner_id": owner_id,
+            "owner_name": profile.owner_name if profile else None,
             "open_slots": int(open_slots),
             "new_procurements": int(new_procurements),
             "quality_waiting": int(quality_waiting),

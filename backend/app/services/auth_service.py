@@ -1,42 +1,36 @@
-from datetime import datetime, timedelta
-from random import randint
+from datetime import datetime
 
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
+from backend.app.core.config import settings
 from backend.app.core.security import create_access_token, hash_password, verify_password
-from backend.app.core.status import AccountRole, AccountStatus, EmailVerificationPurpose
-from backend.app.models.account import Account, CustomerProfile, EmailVerification, OwnerProfile
+from backend.app.core.status import AccountRole, AccountStatus
+from backend.app.models.account import Account, CustomerProfile, OwnerProfile
 from backend.app.repositories.account_repo import AccountRepository
+from backend.app.services.email_verification_service import EmailVerificationService, normalize_email
 
 
 class AuthService:
     def __init__(self, session: Session):
         self.session = session
         self.repo = AccountRepository(session)
-
-    def _create_email_verification(self, account: Account, purpose: str) -> EmailVerification:
-        verification = EmailVerification(
-            account_id=account.account_id,
-            email=account.email,
-            purpose=purpose,
-            verification_code=f"{randint(100000, 999999)}",
-            expires_at=datetime.utcnow() + timedelta(minutes=30),
-            verified=False,
-        )
-        self.session.add(verification)
-        self.session.flush()
-        return verification
+        self.email_verification_service = EmailVerificationService(session)
 
     def signup_customer(self, email: str, password: str, name: str, phone: str) -> dict:
-        if self.repo.get_by_email(email):
+        normalized_email = normalize_email(email)
+        self.email_verification_service.validate_email_format(normalized_email)
+        self.email_verification_service.ensure_verified_for_signup(normalized_email)
+
+        if self.repo.get_by_email(normalized_email):
             raise HTTPException(status_code=400, detail="email already exists")
 
         account = Account(
-            email=email,
+            email=normalized_email,
             password_hash=hash_password(password),
             role=AccountRole.CUSTOMER,
             status=AccountStatus.ACTIVE,
+            email_verified=self.email_verification_service.get_status(normalized_email, "SIGNUP")["verified"],
         )
         self.session.add(account)
         self.session.flush()
@@ -47,25 +41,30 @@ class AuthService:
             customer_phone=phone,
         )
         self.session.add(profile)
-        verification = self._create_email_verification(account, EmailVerificationPurpose.SIGNUP)
         self.session.commit()
 
         return {
             "account_id": account.account_id,
             "customer_id": profile.customer_id,
             "email": account.email,
-            "mock_verification_code": verification.verification_code,
+            "email_verified": account.email_verified,
+            "email_verification_required": settings.email_verification_required,
         }
 
     def signup_owner(self, email: str, password: str, name: str, phone: str) -> dict:
-        if self.repo.get_by_email(email):
+        normalized_email = normalize_email(email)
+        self.email_verification_service.validate_email_format(normalized_email)
+        self.email_verification_service.ensure_verified_for_signup(normalized_email)
+
+        if self.repo.get_by_email(normalized_email):
             raise HTTPException(status_code=400, detail="email already exists")
 
         account = Account(
-            email=email,
+            email=normalized_email,
             password_hash=hash_password(password),
             role=AccountRole.OWNER,
             status=AccountStatus.ACTIVE,
+            email_verified=self.email_verification_service.get_status(normalized_email, "SIGNUP")["verified"],
         )
         self.session.add(account)
         self.session.flush()
@@ -76,41 +75,19 @@ class AuthService:
             owner_phone=phone,
         )
         self.session.add(profile)
-        verification = self._create_email_verification(account, EmailVerificationPurpose.SIGNUP)
         self.session.commit()
 
         return {
             "account_id": account.account_id,
             "owner_id": profile.owner_id,
             "email": account.email,
-            "mock_verification_code": verification.verification_code,
+            "email_verified": account.email_verified,
+            "email_verification_required": settings.email_verification_required,
         }
 
-    def resend_verification(self, email: str, purpose: str) -> dict:
-        account = self.repo.get_by_email(email)
-        if not account:
-            raise HTTPException(status_code=404, detail="account not found")
-        verification = self._create_email_verification(account, purpose)
-        self.session.commit()
-        return {"email": email, "purpose": purpose, "mock_verification_code": verification.verification_code}
-
-    def verify_email(self, email: str, verification_code: str) -> dict:
-        verification = self.repo.get_email_verification(email, EmailVerificationPurpose.SIGNUP)
-        if not verification or verification.verification_code != verification_code:
-            raise HTTPException(status_code=400, detail="invalid verification code")
-        if verification.expires_at < datetime.utcnow():
-            raise HTTPException(status_code=400, detail="verification code expired")
-
-        verification.verified = True
-        verification.verified_at = datetime.utcnow()
-        account = self.repo.get_account(verification.account_id)
-        if account:
-            account.email_verified = True
-        self.session.commit()
-        return {"email": email, "verified": True}
-
     def login(self, email: str, password: str) -> dict:
-        account = self.repo.get_by_email(email)
+        normalized_email = normalize_email(email)
+        account = self.repo.get_by_email(normalized_email)
         if not account or not verify_password(password, account.password_hash):
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid email or password")
         account.last_login_at = datetime.utcnow()

@@ -1,13 +1,15 @@
-from fastapi import HTTPException
+from fastapi import HTTPException, UploadFile
 from sqlalchemy import and_, case, func, select
 from sqlalchemy.orm import Session
 
+from backend.app.core.config import settings
 from backend.app.core.status import HarvestSlotStatus, ProductStatus
 from backend.app.models.farm import Farm
 from backend.app.models.harvest_slot import HarvestSlot
 from backend.app.models.product import Product
 from backend.app.repositories.farm_repo import FarmRepository
 from backend.app.repositories.product_repo import ProductRepository
+from backend.app.services.image_storage_service import ImageStorageService
 
 
 def serialize_farm(farm: Farm) -> dict:
@@ -25,6 +27,8 @@ def serialize_farm(farm: Farm) -> dict:
 
 
 def serialize_product(product: Product, open_slot_count: int | None = None) -> dict:
+    open_slots = [slot for slot in product.harvest_slots if slot.slot_status == HarvestSlotStatus.OPEN]
+    min_open_price = min((slot.confirmed_price for slot in open_slots), default=product.base_price)
     return {
         "product_id": product.product_id,
         "farm_id": product.farm_id,
@@ -37,7 +41,10 @@ def serialize_product(product: Product, open_slot_count: int | None = None) -> d
         "image_url": product.image_url,
         "product_description": product.product_description,
         "farm_name": product.farm.farm_name if product.farm else None,
+        "farm_region": product.farm.farm_region if product.farm else None,
+        "farm_image_url": product.farm.farm_image_url if product.farm else None,
         "open_slot_count": open_slot_count if open_slot_count is not None else 0,
+        "min_open_slot_price": min_open_price,
     }
 
 
@@ -46,6 +53,7 @@ class ProductService:
         self.session = session
         self.product_repo = ProductRepository(session)
         self.farm_repo = FarmRepository(session)
+        self.image_storage_service = ImageStorageService()
 
     def get_farm(self, farm_id: int) -> dict:
         farm = self.farm_repo.get(farm_id)
@@ -129,3 +137,22 @@ class ProductService:
         self.session.commit()
         self.session.refresh(product)
         return serialize_product(product)
+
+    def upload_product_image(self, owner_id: int, product_id: int, upload: UploadFile) -> dict:
+        product = self.product_repo.get(product_id)
+        if not product or product.farm.owner_id != owner_id:
+            raise HTTPException(status_code=404, detail="product not found")
+
+        upload_result = self.image_storage_service.upload_image(
+            upload,
+            product_seq=product.product_id,
+            subfolder=f"{settings.image_default_product_subfolder}/{product.farm_id}",
+        )
+        product.image_url = upload_result["file_url"]
+        self.session.commit()
+        self.session.refresh(product)
+
+        data = serialize_product(product)
+        data["file_name"] = upload_result["file_name"]
+        data["subfolder"] = upload_result["subfolder"]
+        return data

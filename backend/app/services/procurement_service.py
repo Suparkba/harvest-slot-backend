@@ -13,10 +13,24 @@ def serialize_procurement(procurement: Procurement) -> dict:
     return {
         "procurement_id": procurement.procurement_id,
         "order_id": procurement.order_id,
+        "order_no": procurement.order.order_no if procurement.order else None,
+        "reservation_id": procurement.order.reservation_id if procurement.order else None,
+        "reservation_no": procurement.order.reservation.reservation_no if procurement.order and procurement.order.reservation else None,
+        "customer_id": procurement.order.reservation.customer_id if procurement.order and procurement.order.reservation else None,
+        "customer_name": (
+            procurement.order.reservation.customer.customer_name
+            if procurement.order and procurement.order.reservation and procurement.order.reservation.customer
+            else None
+        ),
         "farm_id": procurement.farm_id,
+        "farm_name": procurement.farm.farm_name if procurement.farm else None,
         "owner_id": procurement.owner_id,
         "procurement_no": procurement.procurement_no,
         "procurement_status": procurement.procurement_status,
+        "order_status": procurement.order.order_status if procurement.order else None,
+        "shipment_status": procurement.order.shipment.shipment_status if procurement.order and procurement.order.shipment else None,
+        "return_status": procurement.order.return_request.return_status if procurement.order and procurement.order.return_request else None,
+        "total_amount": procurement.order.total_amount if procurement.order else None,
         "requested_at": procurement.requested_at,
         "response_deadline_at": procurement.response_deadline_at,
         "decided_at": procurement.decided_at,
@@ -25,6 +39,17 @@ def serialize_procurement(procurement: Procurement) -> dict:
             {
                 "procurement_item_id": item.procurement_item_id,
                 "order_item_id": item.order_item_id,
+                "product_id": item.order_item.reservation_item.slot.product_id if item.order_item and item.order_item.reservation_item and item.order_item.reservation_item.slot else None,
+                "product_name": (
+                    item.order_item.reservation_item.slot.product.product_name
+                    if item.order_item and item.order_item.reservation_item and item.order_item.reservation_item.slot and item.order_item.reservation_item.slot.product
+                    else None
+                ),
+                "image_url": (
+                    item.order_item.reservation_item.slot.product.image_url
+                    if item.order_item and item.order_item.reservation_item and item.order_item.reservation_item.slot and item.order_item.reservation_item.slot.product
+                    else None
+                ),
                 "requested_package_count": item.requested_package_count,
                 "requested_kg": float(item.requested_kg),
                 "approved_package_count": item.approved_package_count,

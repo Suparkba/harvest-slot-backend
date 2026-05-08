@@ -10,12 +10,14 @@ from backend.app.core.database import get_db
 from backend.app.core.security import AuthenticatedUser, get_current_user
 from backend.app.schemas.auth_schema import (
     EmailResendRequest,
+    EmailVerificationSendRequest,
     EmailVerifyRequest,
     LoginRequest,
     SignupRequest,
 )
 from backend.app.schemas.common_schema import success_response
 from backend.app.services.auth_service import AuthService
+from backend.app.services.email_verification_service import EmailVerificationService
 
 
 router = APIRouter()
@@ -65,15 +67,56 @@ def owner_signup(payload: SignupRequest, db: Session = Depends(get_db)) -> dict:
 
 @router.post("/auth/email/resend")
 def resend_email(payload: EmailResendRequest, db: Session = Depends(get_db)) -> dict:
-    return success_response(AuthService(db).resend_verification(**payload.model_dump()))
+    data = EmailVerificationService(db).send_verification(**payload.model_dump())
+    return success_response(data, message="verification email sent")
+
+
+@router.post("/auth/email/send")
+def send_email_verification(payload: EmailVerificationSendRequest, db: Session = Depends(get_db)) -> dict:
+    data = EmailVerificationService(db).send_verification(**payload.model_dump())
+    return success_response(data, message="verification email sent")
 
 
 @router.post("/auth/email/verify")
 def verify_email(payload: EmailVerifyRequest, db: Session = Depends(get_db)) -> dict:
-    return success_response(AuthService(db).verify_email(**payload.model_dump()))
+    data = EmailVerificationService(db).verify_code(
+        email=payload.email,
+        code=payload.code or "",
+        purpose=payload.purpose,
+    )
+    return success_response(data, message="email verified")
 
 
-@router.post("/auth/login")
+@router.get("/auth/email/status")
+def email_verification_status(email: str, purpose: str = "SIGNUP", db: Session = Depends(get_db)) -> dict:
+    return success_response(EmailVerificationService(db).get_status(email=email, purpose=purpose))
+
+
+@router.post(
+    "/auth/login",
+    openapi_extra={
+        "requestBody": {
+            "required": True,
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "title": "LoginRequest",
+                        "type": "object",
+                        "required": ["email", "password"],
+                        "properties": {
+                            "email": {"type": "string", "title": "Email"},
+                            "password": {"type": "string", "title": "Password"},
+                        },
+                    },
+                    "example": {
+                        "email": "owner@test.com",
+                        "password": "demo1234!",
+                    },
+                }
+            },
+        }
+    },
+)
 async def login(payload: LoginRequest = Depends(parse_login_request), db: Session = Depends(get_db)) -> dict:
     return success_response(AuthService(db).login(**payload.model_dump()))
 

@@ -24,6 +24,8 @@ def test_owner_dashboard_contract(client):
     body = response.json()
     assert set(body.keys()) == {"data", "message", "error"}
     assert set(body["data"].keys()) == {
+        "owner_id",
+        "owner_name",
         "open_slots",
         "new_procurements",
         "quality_waiting",
@@ -116,6 +118,51 @@ def test_openapi_oauth2_password_flow_points_to_login(client):
     security_scheme = response.json()["components"]["securitySchemes"]["OAuth2PasswordBearer"]
     assert security_scheme["type"] == "oauth2"
     assert security_scheme["flows"]["password"]["tokenUrl"] == "/api/v1/auth/token"
+
+
+def test_openapi_login_contains_json_request_body(client):
+    response = client.get("/openapi.json")
+    assert response.status_code == 200
+
+    login_operation = response.json()["paths"]["/api/v1/auth/login"]["post"]
+    request_body = login_operation.get("requestBody")
+
+    assert request_body is not None
+    assert request_body["required"] is True
+    assert "application/json" in request_body["content"]
+
+    schema = request_body["content"]["application/json"]["schema"]
+    assert schema["title"] == "LoginRequest"
+    assert set(schema["required"]) == {"email", "password"}
+    assert set(schema["properties"].keys()) >= {"email", "password"}
+
+    example = request_body["content"]["application/json"]["example"]
+    assert example["email"] == "owner@test.com"
+    assert example["password"] == "demo1234!"
+
+
+def test_openapi_contains_image_crud_and_quality_multipart_endpoints(client):
+    response = client.get("/openapi.json")
+    assert response.status_code == 200
+    paths = response.json()["paths"]
+
+    image_upload = paths["/api/v1/images/upload"]["post"]
+    image_list = paths["/api/v1/images"]["get"]
+    image_get = paths["/api/v1/images/{file_name}"]["get"]
+    image_update = paths["/api/v1/images/{file_name}"]["put"]
+    image_delete = paths["/api/v1/images/{file_name}"]["delete"]
+    product_upload = paths["/api/v1/owner/products/{product_id}/image"]["post"]
+    quality_analyze = paths["/api/v1/owner/quality-inspections/analyze"]["post"]
+    quality_upload = paths["/api/v1/owner/quality-inspections/image"]["post"]
+
+    assert "multipart/form-data" in image_upload["requestBody"]["content"]
+    assert "subfolder" in image_list["parameters"][0]["name"]
+    assert image_get["parameters"][0]["name"] == "file_name"
+    assert "multipart/form-data" in image_update["requestBody"]["content"]
+    assert image_delete["parameters"][0]["name"] == "file_name"
+    assert "multipart/form-data" in product_upload["requestBody"]["content"]
+    assert "multipart/form-data" in quality_analyze["requestBody"]["content"]
+    assert "multipart/form-data" in quality_upload["requestBody"]["content"]
 
 
 def test_customer_reservation_to_order_flow_persists_in_db(client):

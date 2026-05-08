@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from backend.app.routers.auth_router import router as auth_router
 from backend.app.routers.harvest_slot_router import router as harvest_slot_router
 from backend.app.routers.health_router import router as health_router
+from backend.app.routers.image_router import router as image_router
 from backend.app.routers.ml_router import router as ml_router
 from backend.app.routers.order_router import router as order_router
 from backend.app.routers.owner_router import router as owner_router
@@ -18,6 +19,7 @@ from backend.app.routers.shipment_router import router as shipment_router
 api_router = APIRouter()
 api_router.include_router(health_router, tags=["health"])
 api_router.include_router(auth_router, tags=["auth"])
+api_router.include_router(image_router, tags=["images"])
 api_router.include_router(product_router, tags=["products"])
 api_router.include_router(owner_router, tags=["owner"])
 api_router.include_router(ml_router, tags=["ml"])

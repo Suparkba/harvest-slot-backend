@@ -167,11 +167,11 @@ def get_current_user(token: str | None = Depends(oauth2_scheme), db: Session = D
 
 def require_customer(current_user: AuthenticatedUser = Depends(get_current_user)) -> AuthenticatedUser:
     if current_user.role != AccountRole.CUSTOMER:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="CUSTOMER 권한이 필요합니다.")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="forbidden")
     return current_user
 
 
 def require_owner(current_user: AuthenticatedUser = Depends(get_current_user)) -> AuthenticatedUser:
     if current_user.role != AccountRole.OWNER:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="OWNER 권한이 필요합니다.")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="forbidden")
     return current_user

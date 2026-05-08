@@ -18,7 +18,11 @@ def serialize_slot(slot: HarvestSlot) -> dict:
     return {
         "slot_id": slot.slot_id,
         "farm_id": slot.farm_id,
+        "farm_name": slot.farm.farm_name if slot.farm else None,
         "product_id": slot.product_id,
+        "product_name": slot.product.product_name if slot.product else None,
+        "image_url": slot.product.image_url if slot.product else None,
+        "package_unit_kg": float(slot.product.package_unit_kg) if slot.product else None,
         "prediction_id": slot.prediction_id,
         "confirmed_harvest_start": slot.confirmed_harvest_start,
         "confirmed_harvest_end": slot.confirmed_harvest_end,
