@@ -1,6 +1,8 @@
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from sqlalchemy.exc import IntegrityError
 
 from backend.app.core.config import settings
 from backend.app.routers.router import api_router
@@ -17,8 +19,8 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=settings.cors_origins,
+    allow_credentials=settings.cors_origins != ["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -31,6 +33,22 @@ async def http_exception_handler(_: Request, exc: HTTPException) -> JSONResponse
     return JSONResponse(
         status_code=exc.status_code,
         content=error_response(message=message, error=detail),
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(_: Request, exc: RequestValidationError) -> JSONResponse:
+    return JSONResponse(
+        status_code=422,
+        content=error_response(message="validation failed", error=exc.errors()),
+    )
+
+
+@app.exception_handler(IntegrityError)
+async def integrity_exception_handler(_: Request, exc: IntegrityError) -> JSONResponse:
+    return JSONResponse(
+        status_code=400,
+        content=error_response(message="database integrity error", error="database integrity error"),
     )
 
 

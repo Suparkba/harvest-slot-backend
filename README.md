@@ -59,7 +59,6 @@ OWNER
 로컬 Swagger 확인용:
 
 ```powershell
-cd C:\Users\zzwls\Desktop\teamProject\harvest-slot-backend\harvest-slot-backend
 $env:PYTHONPATH = (Get-Location).Path
 uvicorn backend.app.main:app --reload
 ```
@@ -67,7 +66,6 @@ uvicorn backend.app.main:app --reload
 팀원 접속용:
 
 ```powershell
-cd C:\Users\zzwls\Desktop\teamProject\harvest-slot-backend\harvest-slot-backend
 $env:PYTHONPATH = (Get-Location).Path
 uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000
 ```
