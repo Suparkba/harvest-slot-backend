@@ -1,0 +1,19 @@
+{
+  "data": {},
+  "message": "validation failed",
+  "error": [
+    {
+      "type": "less_than_equal",
+      "loc": [
+        "body",
+        "features",
+        "aug_humidity"
+      ],
+      "msg": "Input should be less than or equal to 100",
+      "input": 120,
+      "ctx": {
+        "le": 100.0
+      }
+    }
+  ]
+}

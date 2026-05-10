@@ -1,0 +1,13 @@
+{
+  "farm_id": 1,
+  "product_id": 1,
+  "features": {
+    "past_yield_kg": 3000,
+    "market_price": 5000,
+    "variety": "부사",
+    "mar_avg_temp": 8.5,
+    "aug_sunshine": 210.0,
+    "oct_rainfall": 65.0,
+    "aug_humidity": 72.0
+  }
+}

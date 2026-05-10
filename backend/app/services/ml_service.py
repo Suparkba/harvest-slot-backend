@@ -1,5 +1,9 @@
 from datetime import date, timedelta
+from pathlib import Path
+from typing import Any
 
+import joblib
+import pandas as pd
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
@@ -7,17 +11,58 @@ from backend.app.models.ml_prediction import MLPrediction
 from backend.app.repositories.farm_repo import FarmRepository
 from backend.app.repositories.product_repo import ProductRepository
 
+FEATURES = [
+    "mar_avg_temp",
+    "aug_sunshine",
+    "oct_rainfall",
+    "aug_humidity",
+]
+
+MODEL_VERSION = "rf-apple-harvest-v1"
+MODEL_PATH = Path(__file__).resolve().parent.parent / "ml_models" / "model.joblib"
+APPLE_VARIETY_FUJI = "\ubd80\uc0ac"
+NORMAL_WARNING_MESSAGE = "\uc815\uc0c1"
+_MODEL = None
+
+
+def get_model() -> Any:
+    global _MODEL
+    if _MODEL is not None:
+        return _MODEL
+    if not MODEL_PATH.exists():
+        raise HTTPException(status_code=500, detail="ML model is not available")
+    try:
+        _MODEL = joblib.load(MODEL_PATH)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="ML model is not available") from exc
+    return _MODEL
+
+
+def build_model_input(features: dict) -> pd.DataFrame:
+    return pd.DataFrame(
+        [[
+            features["mar_avg_temp"],
+            features["aug_sunshine"],
+            features["oct_rainfall"],
+            features["aug_humidity"],
+        ]],
+        columns=FEATURES,
+    )
+
 
 def serialize_prediction(prediction: MLPrediction) -> dict:
+    snapshot = prediction.open_api_snapshot_json or {}
+    unit_yield_kg_10a = snapshot.get("unit_yield_kg_10a")
     return {
         "prediction_id": prediction.prediction_id,
         "farm_id": prediction.farm_id,
         "product_id": prediction.product_id,
+        "unit_yield_kg_10a": round(float(unit_yield_kg_10a), 2) if unit_yield_kg_10a is not None else None,
         "predicted_harvest_start": prediction.predicted_harvest_start,
         "predicted_harvest_end": prediction.predicted_harvest_end,
-        "estimated_yield_kg": float(prediction.estimated_yield_kg),
-        "suggested_reservable_min_kg": float(prediction.suggested_reservable_min_kg),
-        "suggested_reservable_max_kg": float(prediction.suggested_reservable_max_kg),
+        "estimated_yield_kg": round(float(prediction.estimated_yield_kg), 2),
+        "suggested_reservable_min_kg": round(float(prediction.suggested_reservable_min_kg), 2),
+        "suggested_reservable_max_kg": round(float(prediction.suggested_reservable_max_kg), 2),
         "recommended_price": prediction.recommended_price,
         "confidence": float(prediction.confidence),
         "safety_factor": float(prediction.safety_factor),
@@ -41,29 +86,42 @@ class MLService:
             raise HTTPException(status_code=404, detail="product not found")
 
         features = payload["features"]
-        base_yield = float(features.get("past_yield_kg", 400))
-        estimated_yield_kg = round(base_yield * 0.47, 2)
-        start = date.today() + timedelta(days=30)
-        end = start + timedelta(days=6)
+        model = get_model()
+        input_df = build_model_input(features)
+        try:
+            unit_yield_kg_10a = float(model.predict(input_df)[0])
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail="ML prediction failed") from exc
+
+        variety_weight = 1.1 if features["variety"] == APPLE_VARIETY_FUJI else 1.0
+        estimated_yield_kg = round((unit_yield_kg_10a / 1500.0) * features["past_yield_kg"] * variety_weight, 2)
+        suggested_reservable_min_kg = round(estimated_yield_kg * 0.4, 2)
+        suggested_reservable_max_kg = round(estimated_yield_kg * 0.75, 2)
+        recommended_price = int(features["market_price"] * variety_weight)
+        predicted_harvest_start = date.today() + timedelta(days=30)
+        predicted_harvest_end = predicted_harvest_start + timedelta(days=14)
 
         prediction = MLPrediction(
             farm_id=farm.farm_id,
             product_id=product.product_id,
             created_by_owner_id=owner_id,
             input_feature_json=features,
-            open_api_snapshot_json={"mock": True},
-            predicted_harvest_start=start,
-            predicted_harvest_end=end,
+            open_api_snapshot_json={
+                "source": "manual_input",
+                "model": MODEL_VERSION,
+                "unit_yield_kg_10a": round(unit_yield_kg_10a, 2),
+            },
+            predicted_harvest_start=predicted_harvest_start,
+            predicted_harvest_end=predicted_harvest_end,
             estimated_yield_kg=estimated_yield_kg,
-            suggested_reservable_min_kg=round(estimated_yield_kg * 0.62, 2),
-            suggested_reservable_max_kg=round(estimated_yield_kg * 0.76, 2),
-            recommended_price=int(features.get("suggested_price", product.base_price)),
+            suggested_reservable_min_kg=suggested_reservable_min_kg,
+            suggested_reservable_max_kg=suggested_reservable_max_kg,
+            recommended_price=recommended_price,
             confidence=0.78,
-            safety_factor=0.70,
-            warning_message="기상과 생육 상황에 따라 점주 확정값을 조정하세요.",
-            model_version="mock-ml-v1",
+            safety_factor=0.75,
+            warning_message=NORMAL_WARNING_MESSAGE,
+            model_version=MODEL_VERSION,
         )
-        # TODO: replace with real ML model inference when model artifacts are available.
         self.session.add(prediction)
         self.session.commit()
         self.session.refresh(prediction)

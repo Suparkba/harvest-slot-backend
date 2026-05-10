@@ -15,17 +15,17 @@ class EmailDeliveryError(Exception):
 
 
 class EmailService:
-    SUBJECT = "[Harvest Slot] 이메일 인증번호 안내"
+    SUBJECT = "[Harvest Slot] \uc774\uba54\uc77c \uc778\uc99d\ubc88\ud638 \uc548\ub0b4"
 
     @staticmethod
     def build_verification_message(code: str, expire_minutes: int) -> tuple[str, str]:
         subject = EmailService.SUBJECT
         body = (
-            "안녕하세요, Harvest Slot입니다.\n\n"
-            "이메일 인증번호는 아래와 같습니다.\n\n"
-            f"인증번호: {code}\n\n"
-            f"이 인증번호는 {expire_minutes}분 동안만 유효합니다.\n"
-            "본인이 요청하지 않았다면 이 메일을 무시해주세요.\n"
+            "\uc548\ub155\ud558\uc138\uc694. Harvest Slot\uc785\ub2c8\ub2e4.\n\n"
+            "\uc774\uba54\uc77c \uc778\uc99d\ubc88\ud638\ub294 \uc544\ub798\uc640 \uac19\uc2b5\ub2c8\ub2e4.\n\n"
+            f"\uc778\uc99d\ubc88\ud638: {code}\n\n"
+            f"\ubcf8 \uc778\uc99d\ubc88\ud638\ub294 {expire_minutes}\ubd84 \ub3d9\uc548\ub9cc \uc720\ud6a8\ud569\ub2c8\ub2e4.\n"
+            "\ubcf8\uc778\uc774 \uc694\uccad\ud558\uc9c0 \uc54a\uc558\ub2e4\uba74 \uc774 \uba54\uc77c\uc744 \ubb34\uc2dc\ud574\uc8fc\uc138\uc694.\n"
         )
         return subject, body
 

@@ -1,0 +1,12 @@
+{
+  "401_missing_token": {
+    "data": {},
+    "message": "authentication required",
+    "error": "authentication required"
+  },
+  "403_not_owner": {
+    "data": {},
+    "message": "forbidden",
+    "error": "forbidden"
+  }
+}

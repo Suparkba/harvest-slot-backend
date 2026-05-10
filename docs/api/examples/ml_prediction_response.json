@@ -1,0 +1,20 @@
+{
+  "data": {
+    "prediction_id": 1,
+    "farm_id": 1,
+    "product_id": 1,
+    "unit_yield_kg_10a": 1509.53,
+    "predicted_harvest_start": "2026-06-09",
+    "predicted_harvest_end": "2026-06-23",
+    "estimated_yield_kg": 3321.5,
+    "suggested_reservable_min_kg": 1328.6,
+    "suggested_reservable_max_kg": 2491.13,
+    "recommended_price": 5500,
+    "confidence": 0.78,
+    "safety_factor": 0.75,
+    "warning_message": "정상",
+    "model_version": "rf-apple-harvest-v1"
+  },
+  "message": "success",
+  "error": null
+}

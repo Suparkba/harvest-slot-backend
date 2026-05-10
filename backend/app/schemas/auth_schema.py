@@ -7,6 +7,17 @@ class SignupRequest(BaseModel):
     name: str
     phone: str
 
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "email": "test@example.com",
+                "password": "pass1234!",
+                "name": "\ub18d\uac00\ub300\ud45c",
+                "phone": "010-2222-3333",
+            }
+        }
+    )
+
 
 class EmailResendRequest(BaseModel):
     email: str = Field(json_schema_extra={"example": "customer@example.com"})
