@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     app_name: str = "Harvest Slot API"
     api_v1_prefix: str = "/api/v1"
     debug: bool | str = True
+    testing: bool = False
 
     database_host: str = "your-db-host"
     database_port: int = 3306

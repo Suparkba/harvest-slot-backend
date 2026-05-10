@@ -7,6 +7,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from backend.app.core.database import get_db
+from backend.app.core.config import settings
 from backend.app.core.security import hash_password
 from backend.app.main import app
 from backend.app.models import Base
@@ -14,6 +15,16 @@ from backend.app.models.account import Account, CustomerProfile, OwnerProfile
 from backend.app.models.farm import Farm
 from backend.app.models.harvest_slot import HarvestSlot
 from backend.app.models.product import Product
+
+
+@pytest.fixture(autouse=True)
+def isolate_external_quality_analysis(monkeypatch):
+    monkeypatch.setenv("TESTING", "true")
+    monkeypatch.setenv("DL_QUALITY_ENABLED", "false")
+    monkeypatch.setenv("DL_QUALITY_API_URL", "")
+    monkeypatch.setattr(settings, "testing", True)
+    monkeypatch.setattr(settings, "dl_quality_enabled", False)
+    monkeypatch.setattr(settings, "dl_quality_api_url", "")
 
 
 @pytest.fixture
