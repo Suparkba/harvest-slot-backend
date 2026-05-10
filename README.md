@@ -45,13 +45,13 @@ uvicorn backend.app.main:app --reload
     "prediction_id": 1,
     "farm_id": 1,
     "product_id": 1,
-    "unit_yield_kg_10a": 1509.53,
+    "unit_yield_kg_10a": 1509.54,
     "predicted_harvest_start": "YYYY-MM-DD",
     "predicted_harvest_end": "YYYY-MM-DD",
-    "estimated_yield_kg": 3321.50,
-    "suggested_reservable_min_kg": 1328.60,
-    "suggested_reservable_max_kg": 2491.13,
-    "recommended_price": 5500,
+    "estimated_yield_kg": 3019.08,
+    "suggested_reservable_min_kg": 1207.63,
+    "suggested_reservable_max_kg": 2264.31,
+    "recommended_price": 5000,
     "confidence": 0.78,
     "safety_factor": 0.75,
     "warning_message": "정상",
@@ -63,6 +63,10 @@ uvicorn backend.app.main:app --reload
 ```
 
 실제 ML 예측을 실행하려면 `model.joblib` 파일을 `backend/app/ml_models/model.joblib` 경로에 직접 배치해야 합니다.
+
+- Recommended Python version for ML runtime: `Python 3.12`
+- `model.joblib` save-time scikit-learn version: `1.8.0`
+- Backend `requirements.txt` is aligned to `scikit-learn==1.8.0`
 
 ## API Docs
 

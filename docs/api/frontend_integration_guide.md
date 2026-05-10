@@ -51,13 +51,13 @@ Content-Type: application/json
     "prediction_id": 1,
     "farm_id": 1,
     "product_id": 1,
-    "unit_yield_kg_10a": 1509.53,
+    "unit_yield_kg_10a": 1509.54,
     "predicted_harvest_start": "YYYY-MM-DD",
     "predicted_harvest_end": "YYYY-MM-DD",
-    "estimated_yield_kg": 3321.50,
-    "suggested_reservable_min_kg": 1328.60,
-    "suggested_reservable_max_kg": 2491.13,
-    "recommended_price": 5500,
+    "estimated_yield_kg": 3019.08,
+    "suggested_reservable_min_kg": 1207.63,
+    "suggested_reservable_max_kg": 2264.31,
+    "recommended_price": 5000,
     "confidence": 0.78,
     "safety_factor": 0.75,
     "warning_message": "정상",
@@ -88,3 +88,7 @@ Show these values prominently on the prediction result screen:
 - Harvest start date
 - Harvest end date
 - Warning/status message
+
+## Backend Runtime Note
+
+`model.joblib` and the `scikit-learn` version are managed only in the backend runtime. Web/app clients do not need any separate handling beyond calling the API.

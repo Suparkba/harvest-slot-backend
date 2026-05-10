@@ -12,7 +12,7 @@ from backend.app.schemas.common_schema import error_response
 app = FastAPI(
     title="Harvest Slot API",
     version="1.0.0",
-    description="수확예측 기반 과수농가 예약 직배송 API",
+    description="Harvest reservation backend API with ML prediction support.",
     docs_url="/docs",
     redoc_url="/redoc",
 )
