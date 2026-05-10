@@ -20,6 +20,9 @@ from backend.app.models.product import Product
 @pytest.fixture(autouse=True)
 def isolate_external_quality_analysis(monkeypatch):
     monkeypatch.setenv("TESTING", "true")
+    monkeypatch.setenv("DL_QUALITY_ANALYSIS_ENABLED", "false")
+    monkeypatch.setenv("DL_API_BASE_URL", "")
+    monkeypatch.setenv("DL_API_TIMEOUT_SECONDS", "10")
     monkeypatch.setenv("DL_QUALITY_ENABLED", "false")
     monkeypatch.setenv("DL_QUALITY_API_URL", "")
     monkeypatch.setattr(settings, "testing", True)

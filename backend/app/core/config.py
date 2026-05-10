@@ -1,25 +1,26 @@
 from functools import lru_cache
 from typing import Any
 
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    app_name: str = "Harvest Slot API"
+    app_name: str = "harvest-slot-backend"
     api_v1_prefix: str = "/api/v1"
     debug: bool | str = True
     testing: bool = False
 
-    database_host: str = "your-db-host"
+    database_host: str = "localhost"
     database_port: int = 3306
-    database_user: str = "your-db-user"
-    database_password: str = "your-db-password"
+    database_user: str = "root"
+    database_password: str = "your-password"
     database_name: str = "harvest_slot_db"
     database_charset: str = "utf8mb4"
 
-    jwt_secret_key: str = "change-this-secret"
+    jwt_secret_key: str = "change-this-secret-key"
     jwt_algorithm: str = "HS256"
-    access_token_expire_minutes: int = 60
+    access_token_expire_minutes: int = 1440
     cors_allowed_origins: str | list[str] = "*"
     email_verification_required: bool = True
     email_verification_expire_minutes: int = 5
@@ -38,9 +39,18 @@ class Settings(BaseSettings):
     image_default_quality_subfolder: str = "quality-inspections"
     image_allowed_extensions: str | list[str] = "jpg,jpeg,png,gif,webp"
     image_max_size_mb: int = 5
-    dl_quality_enabled: bool = False
-    dl_quality_api_url: str = ""
-    dl_quality_timeout_seconds: int = 20
+    dl_quality_enabled: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("DL_QUALITY_ANALYSIS_ENABLED", "DL_QUALITY_ENABLED"),
+    )
+    dl_quality_api_url: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("DL_API_BASE_URL", "DL_QUALITY_API_URL"),
+    )
+    dl_quality_timeout_seconds: int = Field(
+        default=10,
+        validation_alias=AliasChoices("DL_API_TIMEOUT_SECONDS", "DL_QUALITY_TIMEOUT_SECONDS"),
+    )
 
     model_config = SettingsConfigDict(
         env_file=".env",

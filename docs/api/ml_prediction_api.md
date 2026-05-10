@@ -139,6 +139,18 @@ This API lets an owner submit farm/product context plus manual input features an
 }
 ```
 
+## UI Recommendation
+
+Recommended fields for web/app result screens:
+
+- `estimated_yield_kg`
+- `suggested_reservable_min_kg`
+- `suggested_reservable_max_kg`
+- `recommended_price`
+- `predicted_harvest_start`
+- `predicted_harvest_end`
+- `warning_message`
+
 ## Swagger Test
 
 1. Run the server with `uvicorn backend.app.main:app --reload`

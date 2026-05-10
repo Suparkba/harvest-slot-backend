@@ -15,13 +15,11 @@ uvicorn backend.app.main:app --reload
 
 ## Core Notes
 
-- Keep the existing app entrypoint: `backend.app.main:app`
+- App entrypoint: `backend.app.main:app`
 - Common response format: `{ "data": ..., "message": "success", "error": null }`
 - Owner ML prediction endpoint: `POST /api/v1/owner/ml/predictions`
 
-## ML Prediction API
-
-Request example:
+## ML Prediction Request Example
 
 ```json
 {
@@ -39,7 +37,7 @@ Request example:
 }
 ```
 
-Response example:
+## ML Prediction Response Example
 
 ```json
 {

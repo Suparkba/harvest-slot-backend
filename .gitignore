@@ -3,24 +3,27 @@ __pycache__/
 .venv/
 venv/
 env/
+
 .env
 .env.*
 !.env.example
+
 .pytest_cache/
-pytest-cache-files-*/
 .mypy_cache/
 .ruff_cache/
+
 .DS_Store
 Thumbs.db
 *.log
 
-# local data / model files
 *.pt
 *.pth
-*.joblib
 *.pkl
 *.csv
+
+*.joblib
 !backend/app/ml_models/model.joblib
-local_data/
+
 tmp/
 logs/
+local_data/
