@@ -34,13 +34,24 @@ def test_owner_dashboard_contract(client):
     }
 
 
-def test_owner_ml_prediction_contract(client):
+def test_owner_ml_prediction_contract(client, monkeypatch):
+    class DummyModel:
+        def predict(self, input_df):
+            assert list(input_df.columns) == ml_service.FEATURES
+            return [1509.53]
+
+    monkeypatch.setattr(ml_service, "get_ml_model", lambda: DummyModel())
     payload = {
         "farm_id": 1,
         "product_id": 1,
         "features": {
-            "past_yield_kg": 900,
-            "avg_temperature": 23.5,
+            "past_yield_kg": 3000,
+            "market_price": 5000,
+            "variety": "부사",
+            "mar_avg_temp": 8.5,
+            "aug_sunshine": 210.0,
+            "oct_rainfall": 65.0,
+            "aug_humidity": 72.0,
         },
     }
     response = client.post(
@@ -52,6 +63,8 @@ def test_owner_ml_prediction_contract(client):
     body = response.json()
     assert set(body.keys()) == {"data", "message", "error"}
     assert body["data"]["prediction_id"] >= 1
+    assert body["data"]["model_version"] == "rf-apple-harvest-v1"
+    assert body["data"]["unit_yield_kg_10a"] == 1509.53
 
 
 def test_login_contract_accepts_json_body(client):
@@ -219,3 +232,4 @@ def test_customer_reservation_to_order_flow_persists_in_db(client):
         row for row in refreshed_list_response.json()["data"] if row["reservation_id"] == reservation_id
     )
     assert refreshed_reservation["reservation_status"] == "ORDERED"
+from backend.app.services import ml_service

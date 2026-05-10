@@ -1,28 +1,31 @@
-# API 문서 안내
+# API Docs Overview
 
-Harvest Slot 백엔드의 프론트 연동용 API 문서 모음입니다.
-웹/앱 담당자는 아래 3개 파일을 우선 확인하면 됩니다.
+The files in this folder are the source of truth for the owner ML prediction API handoff.
 
-## 먼저 볼 파일
+## Share These Files
 
 1. `docs/api/ml_prediction_api.md`
-2. `docs/api/examples/ml_prediction_request.json`
-3. `docs/api/frontend_integration_guide.md`
+2. `docs/api/frontend_integration_guide.md`
+3. `docs/api/examples/ml_prediction_request.json`
+4. `docs/api/examples/ml_prediction_response.json`
 
-## 문서 목록
+## Included Files
 
-| 파일 | 설명 |
+| File | Description |
 | --- | --- |
-| `docs/api/ml_prediction_api.md` | ML 예측 API 명세서 |
-| `docs/api/frontend_integration_guide.md` | Flutter Web / Flutter App 연동 가이드 |
-| `docs/api/examples/ml_prediction_request.json` | 요청 바디 예시 |
-| `docs/api/examples/ml_prediction_response.json` | 성공 응답 예시 |
-| `docs/api/examples/ml_prediction_validation_error.json` | 422 validation 실패 예시 |
-| `docs/api/examples/ml_prediction_auth_error.json` | 401/403 인증 또는 권한 실패 예시 |
+| `docs/api/ml_prediction_api.md` | Full ML prediction API spec |
+| `docs/api/frontend_integration_guide.md` | Web/app integration guide |
+| `docs/api/examples/ml_prediction_request.json` | Request example |
+| `docs/api/examples/ml_prediction_response.json` | Success response example |
+| `docs/api/examples/ml_prediction_validation_error.json` | 422 validation error example |
+| `docs/api/examples/ml_prediction_auth_error.json` | 401/403 auth error examples |
 
-## 권장 확인 순서
+## Main Endpoint
 
-1. `ml_prediction_api.md`에서 요청/응답 구조 확인
-2. `ml_prediction_request.json`, `ml_prediction_response.json`으로 실제 payload 형태 확인
-3. `frontend_integration_guide.md`에서 로그인 후 호출 순서와 화면 표시 항목 확인
+- `POST /api/v1/owner/ml/predictions`
 
+## Notes
+
+- Use an `OWNER` bearer token
+- Keep the common response structure `{ data, message, error }`
+- Place `model.joblib` at `backend/app/ml_models/model.joblib` to run real ML prediction
