@@ -25,7 +25,7 @@ NORMAL_WARNING_MESSAGE = "\uc815\uc0c1"
 _MODEL = None
 
 
-def get_model() -> Any:
+def get_ml_model() -> Any:
     global _MODEL
     if _MODEL is not None:
         return _MODEL
@@ -38,7 +38,7 @@ def get_model() -> Any:
     return _MODEL
 
 
-def build_model_input(features: dict) -> pd.DataFrame:
+def build_model_input(features: dict[str, Any]) -> pd.DataFrame:
     return pd.DataFrame(
         [[
             features["mar_avg_temp"],
@@ -86,10 +86,10 @@ class MLService:
             raise HTTPException(status_code=404, detail="product not found")
 
         features = payload["features"]
-        model = get_model()
+        model = get_ml_model()
         input_df = build_model_input(features)
         try:
-            unit_yield_kg_10a = float(model.predict(input_df)[0])
+            unit_yield_kg_10a = round(float(model.predict(input_df)[0]), 2)
         except Exception as exc:
             raise HTTPException(status_code=500, detail="ML prediction failed") from exc
 
@@ -109,7 +109,7 @@ class MLService:
             open_api_snapshot_json={
                 "source": "manual_input",
                 "model": MODEL_VERSION,
-                "unit_yield_kg_10a": round(unit_yield_kg_10a, 2),
+                "unit_yield_kg_10a": unit_yield_kg_10a,
             },
             predicted_harvest_start=predicted_harvest_start,
             predicted_harvest_end=predicted_harvest_end,

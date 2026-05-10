@@ -186,4 +186,6 @@ CUSTOMER 토큰으로 호출한 경우
 - `estimated_yield_kg`, `suggested_reservable_min_kg`, `suggested_reservable_max_kg`는 소수점이 포함될 수 있습니다.
 - `warning_message`는 사용자 안내 문구 영역에 그대로 노출할 수 있습니다.
 - `message`, `error`를 함께 확인해서 실패 응답을 분기 처리하세요.
+## 13. Model File Placement
 
+실제 ML 예측을 실행하려면 `model.joblib` 파일을 `backend/app/ml_models/model.joblib` 경로에 직접 배치해야 합니다.

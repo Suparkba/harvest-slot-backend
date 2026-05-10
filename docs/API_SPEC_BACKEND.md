@@ -113,11 +113,11 @@ ML 예측 응답 예시:
     "estimated_yield_kg": 420.0,
     "suggested_reservable_min_kg": 260.0,
     "suggested_reservable_max_kg": 320.0,
-    "recommended_price": 39000,
+    "recommended_price": 5500,
     "confidence": 0.78,
-    "safety_factor": 0.7,
+    "safety_factor": 0.75,
     "warning_message": "기상과 생육 상황에 따라 점주 확정값을 조정하세요.",
-    "model_version": "mock-ml-v1"
+    "model_version": "rf-apple-harvest-v1"
   },
   "message": "success",
   "error": null
