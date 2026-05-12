@@ -1,20 +1,20 @@
-# ML Prediction API
+# ML 예측 API
 
-## Existing API
+## 기존 API
 
 - Method: `POST`
 - Path: `/api/v1/owner/ml/predictions`
 
-This is the existing ML prediction API. In the original flow, web and app clients send weather feature values directly.
+기존 ML 예측 API입니다. 기본 방식은 앱/웹이 날씨 피처값을 직접 `features`에 넣어서 호출하는 방식입니다.
 
-Required weather feature fields:
+필수 날씨 피처:
 
 - `mar_avg_temp`
 - `aug_sunshine`
 - `oct_rainfall`
 - `aug_humidity`
 
-## Existing API Request Example
+## 기존 API 요청 예시
 
 ```json
 {
@@ -32,22 +32,20 @@ Required weather feature fields:
 }
 ```
 
-## Auto-Weather API
+## 자동 날씨 예측 API
 
 - Method: `POST`
 - Path: `/api/v1/owner/ml/predictions/auto-weather`
 
-This API is implemented. Web and app clients do not need to send weather feature values directly.
+이 API는 구현되어 있습니다. 앱/웹이 날씨 피처값을 직접 넣지 않아도 됩니다.
 
-The backend:
+백엔드는 아래 순서로 동작합니다.
 
-1. Uses `target_year` and `stn_id`
-2. Calls the weather feature logic internally
-3. Generates the four weather features
-4. Sends them into the existing ML prediction flow
-5. Returns the prediction plus `weather_features` and `weather_source`
+1. `target_year`와 `stn_id`를 기준으로 날씨 피처를 생성합니다.
+2. 생성된 4개 피처를 기존 ML 예측 로직에 전달합니다.
+3. 예측 결과와 함께 `weather_features`, `weather_source`를 반환합니다.
 
-## Auto-Weather Request Example
+## 자동 날씨 예측 API 요청 예시
 
 ```json
 {
@@ -61,9 +59,9 @@ The backend:
 }
 ```
 
-## Web/App Choice
+## 앱/웹 선택 방식
 
-Clients can choose one of these approaches:
+앱/웹은 아래 두 방식 중 하나를 선택할 수 있습니다.
 
-1. Call `GET /api/v1/weather/features` first, then call `POST /api/v1/owner/ml/predictions`
-2. Call `POST /api/v1/owner/ml/predictions/auto-weather` once
+1. `GET /api/v1/weather/features` 호출 후 `POST /api/v1/owner/ml/predictions` 호출
+2. `POST /api/v1/owner/ml/predictions/auto-weather` 한 번만 호출

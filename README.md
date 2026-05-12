@@ -1,8 +1,8 @@
-# Harvest Slot Backend
+# Harvest Slot 백엔드
 
-FastAPI backend for the Harvest Slot project.
+Harvest Slot 프로젝트용 FastAPI 백엔드입니다.
 
-## Run
+## 실행 방법
 
 ```powershell
 pip install -r requirements.txt
@@ -10,16 +10,16 @@ $env:PYTHONPATH = (Get-Location).Path
 uvicorn backend.app.main:app --reload
 ```
 
-## Core Runtime
+## 기본 실행 정보
 
-- App entrypoint: `backend.app.main:app`
+- 앱 진입점: `backend.app.main:app`
 - API prefix: `/api/v1`
-- Swagger: `http://127.0.0.1:8000/docs`
-- ML model path: `backend/app/ml_models/model.joblib`
+- Swagger 문서: `http://127.0.0.1:8000/docs`
+- ML 모델 경로: `backend/app/ml_models/model.joblib`
 
-## KMA ASOS Environment Variables
+## KMA ASOS 환경변수
 
-`.env.example` should keep empty key values:
+`.env.example`에는 빈 키 값만 유지해야 합니다.
 
 ```env
 KMA_ASOS_SERVICE_KEY=
@@ -27,19 +27,19 @@ KMA_ASOS_BASE_URL=http://apis.data.go.kr/1360000/AsosDalyInfoService/getWthrData
 KMA_DEFAULT_STN_ID=136
 ```
 
-Notes:
+주의사항:
 
-- Put the real `KMA_ASOS_SERVICE_KEY` only in `.env`
-- Do not commit `.env`
-- Do not place a real key in `.env.example`
+- 실제 `KMA_ASOS_SERVICE_KEY`는 `.env`에만 넣습니다.
+- `.env`는 Git에 올리면 안 됩니다.
+- `.env.example`에는 실제 키를 넣지 않습니다.
 
-## Main APIs
+## 주요 API
 
 - `GET /api/v1/weather/features`
 - `POST /api/v1/owner/ml/predictions`
 - `POST /api/v1/owner/ml/predictions/auto-weather`
 
-## Test Commands
+## 테스트 명령어
 
 ```powershell
 python -m compileall backend/app
@@ -48,7 +48,7 @@ curl.exe -X GET "http://127.0.0.1:8000/api/v1/weather/features?stn_id=136&target
 curl.exe -X GET "http://127.0.0.1:8000/api/v1/weather/features?stn_id=136&target_year=2026"
 ```
 
-## Docs
+## 문서
 
 - `docs/api/weather_feature_api.md`
 - `docs/api/ml_prediction_api.md`

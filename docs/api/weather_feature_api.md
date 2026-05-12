@@ -1,44 +1,44 @@
-# Weather Feature API
+# 날씨 피처 API
 
-## API Purpose
+## API 목적
 
-This API lets the backend generate ML weather features so web and app clients do not need to calculate or manage weather feature values directly.
+이 API는 웹/앱이 날씨 피처값을 직접 계산하지 않아도 백엔드가 기상청 ASOS 데이터를 기준으로 ML용 날씨 피처를 생성할 수 있게 해줍니다.
 
-## Endpoint
+## API 경로
 
 - Method: `GET`
 - Path: `/api/v1/weather/features`
 
-## Query Parameters
+## 쿼리 파라미터
 
-| Field | Type | Required | Notes |
+| 필드 | 타입 | 필수 여부 | 설명 |
 | --- | --- | --- | --- |
-| `stn_id` | string | no | ASOS station number. Default: `136` |
-| `target_year` | integer | yes | Prediction target year |
+| `stn_id` | string | 아니오 | 관측소 번호, 기본값 `136` |
+| `target_year` | integer | 예 | 예측 대상 연도 |
 
-## Default Station
+## 기본 관측소
 
-- Default ASOS station: Andong `136`
+- 안동 ASOS 지점번호 `136`
 
-## Data Source
+## 데이터 출처
 
-- KMA ASOS daily weather API
+- 기상청 ASOS 일자료 API
 
-## Generated Features
+## 생성 피처
 
-- `mar_avg_temp`: March average temperature, simple average of `avgTa`
-- `aug_sunshine`: August sunshine total, simple sum of `sumSsHr`
-- `oct_rainfall`: October rainfall total, simple sum of `sumRn`
-- `aug_humidity`: August average humidity, simple average of `avgRhm`
+- `mar_avg_temp`: 3월 평균기온, `avgTa` 단순 평균
+- `aug_sunshine`: 8월 합계 일조시간, `sumSsHr` 단순 합계
+- `oct_rainfall`: 10월 누적 강수량, `sumRn` 단순 합계
+- `aug_humidity`: 8월 평균습도, `avgRhm` 단순 평균
 
-## Fallback Policy
+## fallback 정책
 
-- If the target month data is missing, the backend falls back to the previous year.
-- Fallback continues up to the previous 3 years.
-- Each feature is resolved independently.
-- `feature_source_years` shows the actual source year used per feature.
+- 대상 월 데이터가 없으면 전년도 데이터를 사용합니다.
+- 최대 3년 전까지 fallback을 시도합니다.
+- 각 피처는 독립적으로 fallback 됩니다.
+- `feature_source_years`로 피처별 실제 사용 연도를 확인할 수 있습니다.
 
-## 2025 Success Example
+## 2025 정상 응답 예시
 
 ```http
 GET /api/v1/weather/features?stn_id=136&target_year=2025
@@ -69,7 +69,7 @@ GET /api/v1/weather/features?stn_id=136&target_year=2025
 }
 ```
 
-## 2026 Fallback Example
+## 2026 fallback 응답 예시
 
 ```http
 GET /api/v1/weather/features?stn_id=136&target_year=2026
@@ -100,12 +100,12 @@ GET /api/v1/weather/features?stn_id=136&target_year=2026
 }
 ```
 
-## Web/App Usage
+## 앱/웹 사용 방법
 
-- Web and app clients should call this backend API, not the KMA API directly.
-- Clients do not need the KMA API key.
+- 앱/웹은 기상청 API를 직접 호출하지 않고 이 백엔드 API를 호출합니다.
+- 앱/웹은 KMA API Key를 알 필요가 없습니다.
 
-## Notes
+## 주의사항
 
-- `KMA_ASOS_SERVICE_KEY` must be stored only in `.env`.
-- Do not commit `.env` or any real API key to GitHub.
+- `KMA_ASOS_SERVICE_KEY`는 `.env`에만 저장해야 합니다.
+- `.env`와 실제 API Key는 GitHub에 올리면 안 됩니다.
