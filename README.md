@@ -1,6 +1,6 @@
 # Harvest Slot Backend
 
-FastAPI + SQLAlchemy + MySQL based backend for the Harvest Slot project.
+FastAPI backend for the Harvest Slot project.
 
 ## Run
 
@@ -10,67 +10,46 @@ $env:PYTHONPATH = (Get-Location).Path
 uvicorn backend.app.main:app --reload
 ```
 
-- Swagger: `http://127.0.0.1:8000/docs`
-- API base path: `/api/v1`
-
-## Core Notes
+## Core Runtime
 
 - App entrypoint: `backend.app.main:app`
-- Common response format: `{ "data": ..., "message": "success", "error": null }`
-- Owner ML prediction endpoint: `POST /api/v1/owner/ml/predictions`
+- API prefix: `/api/v1`
+- Swagger: `http://127.0.0.1:8000/docs`
+- ML model path: `backend/app/ml_models/model.joblib`
 
-## ML Prediction Request Example
+## KMA ASOS Environment Variables
 
-```json
-{
-  "farm_id": 1,
-  "product_id": 1,
-  "features": {
-    "past_yield_kg": 3000,
-    "market_price": 5000,
-    "variety": "부사",
-    "mar_avg_temp": 8.5,
-    "aug_sunshine": 210.0,
-    "oct_rainfall": 65.0,
-    "aug_humidity": 72.0
-  }
-}
+`.env.example` should keep empty key values:
+
+```env
+KMA_ASOS_SERVICE_KEY=
+KMA_ASOS_BASE_URL=http://apis.data.go.kr/1360000/AsosDalyInfoService/getWthrDataList
+KMA_DEFAULT_STN_ID=136
 ```
 
-## ML Prediction Response Example
+Notes:
 
-```json
-{
-  "data": {
-    "prediction_id": 1,
-    "farm_id": 1,
-    "product_id": 1,
-    "unit_yield_kg_10a": 1509.54,
-    "predicted_harvest_start": "YYYY-MM-DD",
-    "predicted_harvest_end": "YYYY-MM-DD",
-    "estimated_yield_kg": 3019.08,
-    "suggested_reservable_min_kg": 1207.63,
-    "suggested_reservable_max_kg": 2264.31,
-    "recommended_price": 5000,
-    "confidence": 0.78,
-    "safety_factor": 0.75,
-    "warning_message": "정상",
-    "model_version": "rf-apple-harvest-v1"
-  },
-  "message": "success",
-  "error": null
-}
+- Put the real `KMA_ASOS_SERVICE_KEY` only in `.env`
+- Do not commit `.env`
+- Do not place a real key in `.env.example`
+
+## Main APIs
+
+- `GET /api/v1/weather/features`
+- `POST /api/v1/owner/ml/predictions`
+- `POST /api/v1/owner/ml/predictions/auto-weather`
+
+## Test Commands
+
+```powershell
+python -m compileall backend/app
+uvicorn backend.app.main:app --reload
+curl.exe -X GET "http://127.0.0.1:8000/api/v1/weather/features?stn_id=136&target_year=2025"
+curl.exe -X GET "http://127.0.0.1:8000/api/v1/weather/features?stn_id=136&target_year=2026"
 ```
 
-실제 ML 예측을 실행하려면 `model.joblib` 파일을 `backend/app/ml_models/model.joblib` 경로에 직접 배치해야 합니다.
+## Docs
 
-- Recommended Python version for ML runtime: `Python 3.12`
-- `model.joblib` save-time scikit-learn version: `1.8.0`
-- Backend `requirements.txt` is aligned to `scikit-learn==1.8.0`
-
-## API Docs
-
+- `docs/api/weather_feature_api.md`
 - `docs/api/ml_prediction_api.md`
 - `docs/api/frontend_integration_guide.md`
-- `docs/api/examples/ml_prediction_request.json`
-- `docs/api/examples/ml_prediction_response.json`

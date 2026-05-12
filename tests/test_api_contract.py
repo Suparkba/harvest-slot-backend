@@ -67,6 +67,60 @@ def test_owner_ml_prediction_contract(client, monkeypatch):
     assert body["data"]["unit_yield_kg_10a"] == 1509.53
 
 
+def test_owner_ml_prediction_auto_weather_contract(client, monkeypatch):
+    class DummyModel:
+        def predict(self, input_df):
+            assert list(input_df.columns) == ml_service.FEATURES
+            return [1509.53]
+
+    class DummyWeatherFeatureService:
+        def get_weather_features(self, *, target_year, stn_id=None):
+            assert target_year == 2026
+            assert stn_id == "136"
+            return {
+                "target_year": 2026,
+                "stn_id": "136",
+                "mar_avg_temp": 7.42,
+                "aug_sunshine": 238.8,
+                "oct_rainfall": 161.6,
+                "aug_humidity": 75.58,
+                "source": "KMA_ASOS_DAILY_API",
+                "fallback_used": True,
+                "fallback_year": 2025,
+                "fallback_reason": "future_month_or_missing_data",
+                "feature_source_years": {
+                    "mar_avg_temp": 2026,
+                    "aug_sunshine": 2025,
+                    "oct_rainfall": 2025,
+                    "aug_humidity": 2025,
+                },
+            }
+
+    monkeypatch.setattr(ml_service, "get_ml_model", lambda: DummyModel())
+    monkeypatch.setattr(ml_service, "WeatherFeatureService", DummyWeatherFeatureService)
+
+    payload = {
+        "farm_id": 1,
+        "product_id": 1,
+        "target_year": 2026,
+        "stn_id": "136",
+        "past_yield_kg": 3000,
+        "market_price": 5000,
+        "variety": "부사",
+    }
+    response = client.post(
+        "/api/v1/owner/ml/predictions/auto-weather",
+        json=payload,
+        headers={"Authorization": "Bearer mock-owner-token"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert set(body.keys()) == {"data", "message", "error"}
+    assert body["data"]["prediction_id"] >= 1
+    assert body["data"]["weather_features"]["mar_avg_temp"] == 7.42
+    assert body["data"]["weather_source"]["fallback_used"] is True
+
+
 def test_login_contract_accepts_json_body(client):
     response = client.post(
         "/api/v1/auth/login",

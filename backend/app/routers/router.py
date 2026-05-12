@@ -14,10 +14,12 @@ from backend.app.routers.quality_router import router as quality_router
 from backend.app.routers.reservation_router import router as reservation_router
 from backend.app.routers.return_router import router as return_router
 from backend.app.routers.shipment_router import router as shipment_router
+from backend.app.routers.weather_router import router as weather_router
 
 
 api_router = APIRouter()
 api_router.include_router(health_router, tags=["health"])
+api_router.include_router(weather_router, tags=["weather"])
 api_router.include_router(auth_router, tags=["auth"])
 api_router.include_router(image_router, tags=["images"])
 api_router.include_router(product_router, tags=["products"])

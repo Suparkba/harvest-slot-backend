@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from backend.app.models.ml_prediction import MLPrediction
 from backend.app.repositories.farm_repo import FarmRepository
 from backend.app.repositories.product_repo import ProductRepository
+from backend.app.services.weather_feature_service import WeatherFeatureService
 
 FEATURES = [
     "mar_avg_temp",
@@ -76,16 +77,77 @@ class MLService:
         self.session = session
         self.farm_repo = FarmRepository(session)
         self.product_repo = ProductRepository(session)
+        self.weather_feature_service = WeatherFeatureService()
 
     def create_prediction(self, owner_id: int, payload: dict) -> dict:
-        farm = self.farm_repo.get(payload["farm_id"])
-        product = self.product_repo.get(payload["product_id"])
+        features, weather_bundle = self.weather_feature_service.merge_weather_features(payload["features"])
+        prediction = self._create_prediction_record(
+            owner_id=owner_id,
+            farm_id=payload["farm_id"],
+            product_id=payload["product_id"],
+            features=features,
+            weather_bundle=weather_bundle,
+        )
+        return serialize_prediction(prediction)
+
+    def create_prediction_with_auto_weather(self, owner_id: int, payload: dict) -> dict:
+        weather_bundle = self.weather_feature_service.get_weather_features(
+            target_year=payload["target_year"],
+            stn_id=payload.get("stn_id"),
+        )
+        features = {
+            "past_yield_kg": payload["past_yield_kg"],
+            "market_price": payload["market_price"],
+            "variety": payload["variety"],
+            "target_year": payload["target_year"],
+            "stn_id": weather_bundle["stn_id"],
+            "mar_avg_temp": weather_bundle["mar_avg_temp"],
+            "aug_sunshine": weather_bundle["aug_sunshine"],
+            "oct_rainfall": weather_bundle["oct_rainfall"],
+            "aug_humidity": weather_bundle["aug_humidity"],
+        }
+        prediction = self._create_prediction_record(
+            owner_id=owner_id,
+            farm_id=payload["farm_id"],
+            product_id=payload["product_id"],
+            features=features,
+            weather_bundle=weather_bundle,
+        )
+        serialized = serialize_prediction(prediction)
+        serialized["weather_features"] = {
+            "mar_avg_temp": weather_bundle["mar_avg_temp"],
+            "aug_sunshine": weather_bundle["aug_sunshine"],
+            "oct_rainfall": weather_bundle["oct_rainfall"],
+            "aug_humidity": weather_bundle["aug_humidity"],
+        }
+        serialized["weather_source"] = {
+            "source": weather_bundle["source"],
+            "fallback_used": weather_bundle["fallback_used"],
+            "fallback_year": weather_bundle["fallback_year"],
+            "fallback_reason": weather_bundle["fallback_reason"],
+            "feature_source_years": weather_bundle["feature_source_years"],
+        }
+        return serialized
+
+    def _validate_prediction_target(self, owner_id: int, farm_id: int, product_id: int) -> tuple[Any, Any]:
+        farm = self.farm_repo.get(farm_id)
+        product = self.product_repo.get(product_id)
         if not farm or farm.owner_id != owner_id:
             raise HTTPException(status_code=404, detail="farm not found")
         if not product or product.farm_id != farm.farm_id:
             raise HTTPException(status_code=404, detail="product not found")
+        return farm, product
 
-        features = payload["features"]
+    def _create_prediction_record(
+        self,
+        *,
+        owner_id: int,
+        farm_id: int,
+        product_id: int,
+        features: dict[str, Any],
+        weather_bundle: dict[str, Any] | None,
+    ) -> MLPrediction:
+        farm, product = self._validate_prediction_target(owner_id, farm_id, product_id)
         model = get_ml_model()
         input_df = build_model_input(features)
         try:
@@ -107,9 +169,10 @@ class MLService:
             created_by_owner_id=owner_id,
             input_feature_json=features,
             open_api_snapshot_json={
-                "source": "manual_input",
+                "source": weather_bundle["source"] if weather_bundle else "manual_input",
                 "model": MODEL_VERSION,
                 "unit_yield_kg_10a": unit_yield_kg_10a,
+                "weather_feature_snapshot": weather_bundle,
             },
             predicted_harvest_start=predicted_harvest_start,
             predicted_harvest_end=predicted_harvest_end,
@@ -125,7 +188,7 @@ class MLService:
         self.session.add(prediction)
         self.session.commit()
         self.session.refresh(prediction)
-        return serialize_prediction(prediction)
+        return prediction
 
     def list_predictions(self, owner_id: int) -> list[dict]:
         rows = (
